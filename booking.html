@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>New Booking — John &amp; Jans Auto Detailing</title>
+<link rel="icon" href="assets/logo.jpg" />
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar-scrim" data-sidebar-scrim></div>
+
+  <aside class="sidebar" data-sidebar>
+    <div class="sidebar__badge">
+      <img src="assets/logo.jpg" alt="John & Jans Auto Detailing" class="sidebar__badge-mark" />
+      <div class="sidebar__badge-text">
+        <span class="sidebar__badge-name" data-company-name>John &amp; Jans Auto Detailing</span>
+        <span class="sidebar__badge-tagline" data-company-tagline>Carwash-Auto Detailing-PPF-Tint</span>
+      </div>
+    </div>
+
+    <nav class="sidebar__nav">
+      <span class="sidebar__nav-eyebrow">Workspace</span>
+      <a class="nav-link" href="index.html" data-nav-link><span class="nav-link__icon">◆</span>Dashboard</a>
+      <a class="nav-link" href="booking.html" data-nav-link><span class="nav-link__icon">＋</span>New Booking</a>
+      <a class="nav-link" href="table.html" data-nav-link><span class="nav-link__icon">☰</span>Manage Bookings</a>
+    </nav>
+
+    <div class="sidebar__footer">
+      © <span data-current-year></span> <span data-company-name></span><br />
+      Sheet-backed booking system
+    </div>
+  </aside>
+
+  <main class="workspace">
+    <div class="topbar">
+      <button type="button" class="icon-btn" data-sidebar-toggle aria-label="Open menu">☰</button>
+      <span class="sidebar__badge-name" data-company-name></span>
+    </div>
+
+    <div class="page-header">
+      <div>
+        <span class="page-header__eyebrow">Booking Entry</span>
+        <h1 class="page-header__title">New booking</h1>
+        <p class="page-header__subtitle">Services and prices load automatically from the Services sheet.</p>
+      </div>
+    </div>
+
+    <form class="form-card" id="booking-form" novalidate>
+      <div class="form-grid">
+
+        <div class="field">
+          <label for="field-name">Customer name</label>
+          <input id="field-name" name="name" type="text" placeholder="e.g. Alex Rivera" autocomplete="off" required />
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field">
+          <label for="field-date">Booking date</label>
+          <input id="field-date" name="date" type="date" required />
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field">
+          <label for="field-service">Service</label>
+          <select id="field-service" name="service" required>
+            <option value="">Loading services…</option>
+          </select>
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field">
+          <label for="field-status">Status</label>
+          <select id="field-status" name="status" required>
+            <option value="Pending">Pending</option>
+            <option value="Ongoing">Ongoing</option>
+            <option value="Completed">Completed</option>
+            <option value="Cancelled">Cancelled</option>
+          </select>
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field">
+          <label for="field-price">Price</label>
+          <input id="field-price" name="price" type="number" step="0.01" min="0" placeholder="0.00" required />
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field field--full">
+          <label for="field-remarks">Remarks</label>
+          <textarea id="field-remarks" name="remarks" rows="3" placeholder="Optional notes — condition of vehicle, special requests, etc."></textarea>
+          <span class="field-error"></span>
+        </div>
+
+        <div class="form-actions">
+          <button type="reset" class="btn btn--ghost">Clear</button>
+          <button type="submit" class="btn btn--primary" id="booking-submit">Save booking</button>
+        </div>
+      </div>
+    </form>
+  </main>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/services.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/app.js"></script>
+<script src="js/booking.js"></script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Manage Bookings — John &amp; Jans Auto Detailing</title>
+<link rel="icon" href="assets/logo.jpg" />
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar-scrim" data-sidebar-scrim></div>
+
+  <aside class="sidebar" data-sidebar>
+    <div class="sidebar__badge">
+      <img src="assets/logo.jpg" alt="John & Jans Auto Detailing" class="sidebar__badge-mark" />
+      <div class="sidebar__badge-text">
+        <span class="sidebar__badge-name" data-company-name>John &amp; Jans Auto Detailing</span>
+        <span class="sidebar__badge-tagline" data-company-tagline>Carwash-Auto Detailing-PPF-Tint</span>
+      </div>
+    </div>
+
+    <nav class="sidebar__nav">
+      <span class="sidebar__nav-eyebrow">Workspace</span>
+      <a class="nav-link" href="index.html" data-nav-link><span class="nav-link__icon">◆</span>Dashboard</a>
+      <a class="nav-link" href="booking.html" data-nav-link><span class="nav-link__icon">＋</span>New Booking</a>
+      <a class="nav-link" href="table.html" data-nav-link><span class="nav-link__icon">☰</span>Manage Bookings</a>
+    </nav>
+
+    <div class="sidebar__footer">
+      © <span data-current-year></span> <span data-company-name></span><br />
+      Sheet-backed booking system
+    </div>
+  </aside>
+
+  <main class="workspace">
+    <div class="topbar">
+      <button type="button" class="icon-btn" data-sidebar-toggle aria-label="Open menu">☰</button>
+      <span class="sidebar__badge-name" data-company-name></span>
+    </div>
+
+    <div class="page-header">
+      <div>
+        <span class="page-header__eyebrow">Booking Management</span>
+        <h1 class="page-header__title">All bookings</h1>
+        <p class="page-header__subtitle">Search, filter, edit, or archive any booking. Changes write straight back to the sheet.</p>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button type="button" class="btn btn--ghost" id="refresh-btn">⟳ Refresh</button>
+        <button type="button" class="btn btn--accent" id="export-pdf-btn">⬇ Export PDF</button>
+      </div>
+    </div>
+
+    <div class="summary-grid">
+      <div class="stat-card stat-card--pending">
+        <span class="stat-card__label">Pending</span>
+        <span class="stat-card__value mono" id="summary-pending">–</span>
+      </div>
+      <div class="stat-card stat-card--ongoing">
+        <span class="stat-card__label">Ongoing</span>
+        <span class="stat-card__value mono" id="summary-ongoing">–</span>
+      </div>
+      <div class="stat-card stat-card--completed">
+        <span class="stat-card__label">Completed</span>
+        <span class="stat-card__value mono" id="summary-completed">–</span>
+      </div>
+      <div class="stat-card stat-card--cancelled">
+        <span class="stat-card__label">Cancelled</span>
+        <span class="stat-card__value mono" id="summary-cancelled">–</span>
+      </div>
+      <div class="stat-card stat-card--total">
+        <span class="stat-card__label">Total bookings</span>
+        <span class="stat-card__value mono" id="summary-total">–</span>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="search-box__icon">⌕</span>
+        <input type="text" id="search-input" placeholder="Search name, service, status, price, remarks, date…" />
+      </div>
+      <select class="select-control" id="filter-select">
+        <option value="all">All bookings</option>
+        <option value="today">Today</option>
+        <option value="week">This week</option>
+        <option value="month">This month</option>
+        <option value="pending">Pending</option>
+        <option value="ongoing">Ongoing</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+      <select class="select-control" id="page-size-select">
+        <option value="10">10 / page</option>
+        <option value="25">25 / page</option>
+        <option value="50">50 / page</option>
+      </select>
+    </div>
+
+    <div class="table-card">
+      <div class="table-scroll">
+        <table class="bookings-table">
+          <thead>
+            <tr>
+              <th data-sort-key="Name">Name</th>
+              <th data-sort-key="Date">Date</th>
+              <th data-sort-key="Service">Service</th>
+              <th data-sort-key="Status">Status</th>
+              <th data-sort-key="Price">Price</th>
+              <th>Remarks</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="bookings-tbody"></tbody>
+        </table>
+      </div>
+      <p class="empty-state" id="empty-state" hidden>No bookings match your search and filters.</p>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/services.js"></script>
+<script src="js/sync.js"></script>
+<script src="js/app.js"></script>
+<script src="js/table.js"></script>
+</body>
+</html>

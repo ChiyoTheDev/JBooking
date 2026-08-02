@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>John &amp; Jans Auto Detailing — Booking System</title>
+<link rel="icon" href="assets/logo.jpg" />
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<div class="app-shell">
+
+  <div class="sidebar-scrim" data-sidebar-scrim></div>
+
+  <aside class="sidebar" data-sidebar>
+    <div class="sidebar__badge">
+      <img src="assets/logo.jpg" alt="John & Jans Auto Detailing" class="sidebar__badge-mark" />
+      <div class="sidebar__badge-text">
+        <span class="sidebar__badge-name" data-company-name>John &amp; Jans Auto Detailing</span>
+        <span class="sidebar__badge-tagline" data-company-tagline>Carwash-Auto Detailing-PPF-Tint</span>
+      </div>
+    </div>
+
+    <nav class="sidebar__nav">
+      <span class="sidebar__nav-eyebrow">Workspace</span>
+      <a class="nav-link" href="index.html" data-nav-link><span class="nav-link__icon">◆</span>Dashboard</a>
+      <a class="nav-link" href="booking.html" data-nav-link><span class="nav-link__icon">＋</span>New Booking</a>
+      <a class="nav-link" href="table.html" data-nav-link><span class="nav-link__icon">☰</span>Manage Bookings</a>
+    </nav>
+
+    <div class="sidebar__footer">
+      © <span data-current-year></span> <span data-company-name></span><br />
+      Sheet-backed booking system
+    </div>
+  </aside>
+
+  <main class="workspace">
+    <div class="topbar">
+      <button type="button" class="icon-btn" data-sidebar-toggle aria-label="Open menu">☰</button>
+      <span class="sidebar__badge-name" data-company-name></span>
+    </div>
+
+    <section class="hero">
+      <span class="hero__eyebrow">Booking Management</span>
+      <h1 class="hero__title">Every vehicle, every appointment, tracked to the detail.</h1>
+      <p class="hero__subtitle">
+        Bookings, services, and status all live in one Google Sheet — this workspace just gives your
+        team a fast, premium front end for reading and writing to it.
+      </p>
+      <div class="hero__actions">
+        <a href="booking.html" class="btn btn--accent">＋ New booking</a>
+        <a href="table.html" class="btn btn--ghost" style="color:#f5f3ee;border-color:#3a3c42;">View all bookings</a>
+      </div>
+    </section>
+
+    <div class="quicklinks">
+      <a href="booking.html" class="quicklink">
+        <span class="quicklink__icon">＋</span>
+        <span class="quicklink__title">Log a new booking</span>
+        <span class="quicklink__desc">Capture customer, service, and price in a validated form that writes straight to the Bookings sheet.</span>
+      </a>
+      <a href="table.html" class="quicklink">
+        <span class="quicklink__icon">☰</span>
+        <span class="quicklink__title">Manage bookings</span>
+        <span class="quicklink__desc">Search, filter, edit, and archive bookings, with live status counts up top.</span>
+      </a>
+      <a href="table.html" class="quicklink">
+        <span class="quicklink__icon">🧾</span>
+        <span class="quicklink__title">Export &amp; receipts</span>
+        <span class="quicklink__desc">Download a filtered table as PDF, or generate a single-booking receipt for a customer.</span>
+      </a>
+    </div>
+  </main>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
