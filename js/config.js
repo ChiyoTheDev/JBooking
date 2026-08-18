@@ -13,16 +13,20 @@ const CONFIG = Object.freeze({
   COMPANY_NAME: 'John & Jans Auto Detailing',
   COMPANY_TAGLINE: 'Carwash-Auto Detailing-PPF-Tint',
 
-  STATUSES: ['Pending', 'Ongoing', 'Completed', 'Cancelled'],
+  STATUSES: ['Pending', 'Completed', 'Cancelled'],
 
   CURRENCY_SYMBOL: 'PHP',
+
+  // Vehicle size categories used to price services — must match the
+  // Services sheet's column headers exactly (see backend/Code.gs).
+  VEHICLE_SIZES: ['Small', 'Medium', 'Large', 'XL', 'XXL', 'Pick Up', 'Dirty Trail Car'],
 
   // How often the table page silently checks the sheet for changes made
   // from other devices/browsers (milliseconds). Lower = more "live" but
   // more Apps Script requests. 20s is a reasonable default for a small team.
   POLL_INTERVAL_MS: 20000,
 
-  // How long the booking form's Services dropdown is cached in this
+  // How long the booking form's Services list is cached in this
   // browser tab before it's treated as stale (milliseconds). The cached
   // list still renders instantly; a fresh copy is fetched in the
   // background and swapped in if it changed.

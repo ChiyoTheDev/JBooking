@@ -1,73 +1,88 @@
-# Lumière Detail — Booking Management System
+# John & Jans Auto Detailing — Booking Management System
 
-A booking system for an automotive detailing business, built with HTML5, Tailwind-flavored custom CSS, vanilla JavaScript, and a Google Sheet as the database. No build step, no framework — open the HTML files and go.
+A booking system built with HTML5, custom CSS, vanilla JavaScript, and a Google Sheet as the database.
+
+## ⚠️ You have existing data — read this before touching the sheet
+
+This update adds new columns and a new way of pricing services. To protect your existing bookings, every new column is **appended to the end** of your current sheets — nothing existing gets moved or reordered. Follow the steps below in order.
+
+### 1. Update the `Bookings` sheet
+
+Your current columns (A–I) stay exactly as they are. Add these five new headers starting in **column J**:
+
+| J | K | L | M | N |
+|---|---|---|---|---|
+| Time | Mobile No. | Vehicle | Vehicle Size | Plate Number |
+
+**Important — format column J (Time) as Plain Text**: select column J → *Format → Number → Plain text*. Google Sheets will otherwise try to "helpfully" convert times you type into its own time format, which can shift by a few hours depending on timezone handling. Plain text keeps it exactly as entered (e.g. `14:30`).
+
+### 2. Update the `Archive` sheet
+
+Same five columns, same order, also starting at column J. (Archive always mirrors Bookings.)
+
+### 3. Update the `Services` sheet
+
+Your current columns (A–D: Service Name, Price, Description, Active) stay as they are — column B (`Price`) is no longer used by the app, but leave it there so nothing shifts. Add seven new headers starting at **column E**, matching your rate card exactly:
+
+| E | F | G | H | I | J | K |
+|---|---|---|---|---|---|---|
+| Small | Medium | Large | XL | XXL | Pick Up | Dirty Trail Car |
+
+Then fill in a price for every service at every size. Using your rate card as the example for the first row:
+
+| Service Name | Price | Description | Active | Small | Medium | Large | XL | XXL | Pick Up | Dirty Trail Car |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Elite Carwash | | 3-bucket wash, interior vacuum... | TRUE | 400 | 500 | 600 | 650 | 700 | 900 | 1500 |
+
+Repeat for each service on your rate card (Interior Light Detailing, Interior Detailing, Additional Carpet Removal, Glass Detailing Acid Rain Removal, Additional Glass Coating, Pet Hair Removal Interior). Leave any size blank for a service that isn't offered at that size — it'll show as "N/A" on the booking form and won't add anything to the total when that size is selected.
+
+### 4. Replace the Apps Script
+
+In **Extensions → Apps Script**, replace everything with the new `backend/Code.gs` from this download, then **Deploy → Manage deployments → (pencil icon) → Version: New version → Deploy**. The deployment URL stays the same, so `js/config.js` doesn't need to change.
+
+### 5. Existing "Ongoing" bookings
+
+The Ongoing status has been removed going forward — it won't appear as an option anymore. Any bookings already marked Ongoing in your sheet will still display fine, they just can't be re-selected. Worth a quick manual pass to move any current Ongoing rows to Pending or Completed.
+
+---
 
 ## What's inside
 
 ```
-index.html          Dashboard / landing page
-booking.html         New booking form
-table.html            Manage bookings: search, filter, sort, edit, archive, export
+index.html            Dashboard / landing page
+booking.html           New booking form
+table.html              Manage bookings: search, filter, sort, edit, archive, export
 
-css/styles.css        All styling (design tokens + components)
+css/styles.css          All styling (design tokens + components)
 
-js/config.js           Your Apps Script URL + API key go here
-js/api.js               All fetch() calls to the backend live here
-js/ui.js                 Toasts, confirm dialogs, skeletons, formatting helpers
-js/app.js               Shared shell logic (nav, sidebar toggle)
-js/booking.js           Booking form logic
-js/table.js              Booking management page logic
+js/config.js             Brand info, Apps Script URL/key, statuses, vehicle sizes
+js/api.js                 All fetch() calls to the backend live here
+js/ui.js                   Toasts, dialogs, skeletons, formatting/validation helpers
+js/services.js             Loads + caches the Services sheet; builds the price checklist
+js/sync.js                 Same-device tab-to-tab live updates
+js/app.js                 Shared shell logic (nav, sidebar toggle)
+js/booking.js             Booking form logic
+js/table.js                Booking management page logic
 
-backend/Code.gs        Google Apps Script — turns your Sheet into a JSON API
+backend/Code.gs         Google Apps Script — turns your Sheet into a JSON API
 ```
 
-## Why Apps Script sits in front of the Sheet
+## How the new pricing works
 
-The Google Sheets REST API can read a public sheet with just an API key, but **writing** to a sheet requires OAuth sign-in — not practical for a shared front-desk tool. The standard, well-supported workaround is to deploy a small Google Apps Script as a web app: it runs under your Google account, exposes simple `getBookings` / `createBooking` / `updateBooking` / `archiveBooking` actions, and the front end just calls it with `fetch()`. `backend/Code.gs` is that script — you deploy it once and never touch OAuth.
+- Each service now has a **price per vehicle size** instead of one flat price (`js/services.js` reads the Small/Medium/.../Dirty Trail Car columns from the Services sheet).
+- A booking can include **multiple services** — they're shown as checkboxes, each labeled with its price at whatever vehicle size is currently selected.
+- The **Total price** field sums the checked services automatically whenever you change the vehicle size or check/uncheck a service. It's still a normal editable field afterward, so you can manually adjust for a discount or special case — just note that changing the size or service selection again will recalculate and overwrite it.
+- In the sheet, a booking's `Service` column stores the chosen services as a comma-separated list (e.g. `Elite Carwash, Pet Hair Removal Interior`).
 
-## Setup (10 minutes)
+## Notes on how everything else works
 
-1. **Create the spreadsheet.** Make a new Google Sheet with three tabs, named exactly:
-   - `Bookings` — header row: `Booking ID | Name | Date | Service | Status | Price | Remarks | Created At | Updated At`
-   - `Services` — header row: `Service Name | Price | Description | Active`
-   - `Archive` — same header row as `Bookings`
-
-   Add a few rows to `Services` (e.g. "Full Detail", 150, "Interior + exterior", TRUE) so the booking form has something to load.
-
-2. **Add the backend script.** In the Sheet, go to **Extensions → Apps Script**. Delete the placeholder code and paste in the contents of `backend/Code.gs`.
-
-3. **Set a secret key.** In `Code.gs`, change:
-   ```js
-   const API_KEY = 'REPLACE_WITH_A_LONG_RANDOM_SECRET';
-   ```
-   to any long random string.
-
-4. **Deploy.** Click **Deploy → New deployment**, type **Web app**. Set:
-   - Execute as: **Me**
-   - Who has access: **Anyone**
-
-   Click Deploy, authorize the permissions prompt, and copy the deployment URL (ends in `/exec`).
-
-5. **Connect the front end.** Open `js/config.js` and fill in:
-   ```js
-   API_URL: 'https://script.google.com/macros/s/.../exec',
-   API_KEY: 'the same secret from step 3',
-   ```
-
-6. **Open `index.html`** in a browser (or serve the folder with any static file server — e.g. `npx serve .`). You're live.
-
-> Every time you edit `Code.gs`, you need to **Deploy → Manage deployments → Edit → New version** for changes to take effect — saving alone isn't enough.
-
-## Notes on how each feature works
-
-- **Service dropdown & price autofill** (`booking.html`) — loads active rows from the `Services` sheet on page load; selecting a service fills the Price field, which stays editable.
-- **Search & filters** (`table.html`) — search checks name, date, service, status, price, and remarks together; filters (Today / This Week / This Month / status) apply on top of search, not instead of it.
-- **Edit** — opens a modal pre-filled with the row's current values; saving calls `updateBooking`, which only changes the fields you touched and stamps `Updated At`.
-- **Delete = archive** — nothing is destroyed. The row is copied into `Archive` and removed from `Bookings`, so history is always recoverable by opening the Archive tab.
-- **PDF export** — "Export PDF" on the table page respects whatever is currently filtered/searched; the receipt icon on a row builds a one-booking invoice PDF. Both use jsPDF + AutoTable, loaded from CDN in `table.html`.
-- **Loading states** — buttons show a spinner and disable themselves during network calls (also blocks duplicate submissions); the table shows shimmering skeleton rows while bookings load.
+- **Search** (`table.html`) checks name, date, service, status, price, remarks, vehicle, plate number, mobile number, and vehicle size together; filters (Today / This Week / This Month / status) apply on top of search, not instead of it.
+- **Edit** opens a modal pre-filled with the row's current values — including re-checking whichever services were originally selected; saving calls `updateBooking`, which only changes the fields you touched and stamps `Updated At`.
+- **Delete = archive.** Nothing is destroyed — the row is copied into `Archive` and removed from `Bookings`.
+- **PDF export** — "Export PDF" on the table page respects whatever is currently filtered/searched (landscape, to fit the extra columns); the receipt icon on a row builds a one-booking invoice PDF with the customer's vehicle/contact details included.
+- **Cross-device sync** — the table page quietly checks for changes made from other devices every 20 seconds (tunable via `CONFIG.POLL_INTERVAL_MS`); same-device tabs (e.g. the booking form and the table open side by side) update instantly via `BroadcastChannel`.
 
 ## Customizing
 
-- Brand name, tagline, currency symbol, and the status list are centralized in `js/config.js`.
-- Colors, type, spacing and every component (cards, pills, table, modal, toasts) are defined with CSS variables at the top of `css/styles.css` — change the variables once to reskin the whole app.
+- Brand name, tagline, currency symbol, status list, and vehicle sizes are centralized in `js/config.js`.
+- Colors, type, spacing and every component are defined with CSS variables at the top of `css/styles.css`.

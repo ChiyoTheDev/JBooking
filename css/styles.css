@@ -327,7 +327,7 @@ a { color: inherit; }
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
   margin-bottom: 28px;
 }
@@ -342,7 +342,6 @@ a { color: inherit; }
   overflow: hidden;
 }
 .stat-card--pending { border-top-color: var(--status-pending); }
-.stat-card--ongoing { border-top-color: var(--status-ongoing); }
 .stat-card--completed { border-top-color: var(--status-completed); }
 .stat-card--cancelled { border-top-color: var(--status-cancelled); }
 .stat-card--total { border-top-color: var(--ink); background: var(--ink); }
@@ -422,10 +421,71 @@ a { color: inherit; }
   border-color: var(--status-cancelled);
 }
 
+.field--invalid .service-picker {
+  outline: 1px solid var(--status-cancelled);
+  border-radius: var(--radius-sm);
+}
+
 .field-error {
   font-size: 11.5px;
   color: var(--status-cancelled);
   min-height: 14px;
+}
+
+/* ---- service picker (multi-select checklist) ---- */
+
+.service-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+  padding: 4px;
+}
+
+.service-picker__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--bone-dim);
+  background: var(--bone);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.service-picker__item:hover {
+  border-color: var(--brass);
+}
+
+.service-picker__item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brass);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.service-picker__name {
+  flex: 1;
+  font-size: 13.5px;
+  color: var(--text-dark);
+}
+
+.service-picker__price {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.service-picker__empty {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 10px 4px;
+}
+
+.service-picker__search {
+  margin-bottom: 10px;
 }
 
 .form-actions {
@@ -500,7 +560,7 @@ a { color: inherit; }
 table.bookings-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 860px;
+  min-width: 1040px;
 }
 
 .bookings-table thead th {
@@ -538,14 +598,88 @@ table.bookings-table {
 .bookings-table tbody tr:last-child td { border-bottom: none; }
 .bookings-table tbody tr:hover { background: rgba(176, 141, 87, 0.05); }
 
-.cell-remarks {
-  max-width: 220px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* ---- expandable row detail (Time / Mobile / Vehicle Size) ---- */
+
+tr.row-detail td {
+  padding: 0;
+  border-bottom: 1px solid var(--bone-dim);
+  background: var(--bone);
+}
+
+tr.row-detail--hidden {
+  display: none;
+}
+
+tr.row-detail:hover {
+  background: var(--bone);
+}
+
+.row-detail__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 32px;
+  padding: 12px 16px;
+}
+
+.row-detail__field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.row-detail__label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.row-detail__value {
+  font-size: 13px;
+  color: var(--text-dark);
+}
+
+.cell-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+.meta-item {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* Container for two-line cells */
+.cell-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cell-group__main {
+  font-weight: 600;
+  color: var(--text-dark);
+  font-size: 13.5px;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+.cell-group__sub {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
   white-space: nowrap;
 }
 
-.cell-actions { display: flex; gap: 6px; white-space: nowrap; }
+/* Specific adjustment to prevent columns from getting too wide */
+.bookings-table td {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .icon-btn {
   border: 1px solid var(--bone-dim);
@@ -699,6 +833,8 @@ table.bookings-table {
   padding: 26px;
   max-width: 420px;
   width: 100%;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
   box-shadow: var(--shadow-modal);
   transform: translateY(6px) scale(0.98);
   transition: transform 0.2s ease;
@@ -716,7 +852,15 @@ table.bookings-table {
   gap: 10px;
   margin-top: 22px;
 }
-.modal-card__actions--full { grid-column: 1 / -1; }
+.modal-card__actions--full {
+  grid-column: 1 / -1;
+  position: sticky;
+  bottom: -26px;
+  margin: 20px -26px -26px;
+  padding: 14px 26px 26px;
+  background: var(--paper);
+  border-top: 1px solid var(--bone-dim);
+}
 
 .edit-form {
   display: grid;

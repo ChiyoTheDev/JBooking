@@ -7,18 +7,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('booking-form');
   if (!form) return;
 
-  const serviceSelect = document.getElementById('field-service');
+  const vehicleSizeSelect = document.getElementById('field-vehicle-size');
+  const servicePicker = document.getElementById('service-picker');
+  const serviceSearchInput = document.getElementById('service-search');
   const priceInput = document.getElementById('field-price');
   const dateInput = document.getElementById('field-date');
   const submitBtn = document.getElementById('booking-submit');
 
-  let services = [];
+  let servicesList = null; // null = not loaded yet
   let isSubmitting = false;
 
   init();
 
   async function init() {
     setDefaultDate();
+    populateVehicleSizes();
     await loadServices();
   }
 
@@ -28,49 +31,64 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function populateVehicleSizes() {
+    const options = CONFIG.VEHICLE_SIZES.map((size) => `<option value="${size}">${size}</option>`).join('');
+    vehicleSizeSelect.innerHTML = `<option value="">Select a size…</option>${options}`;
+  }
+
+  // ---------- services ----------
+
   async function loadServices() {
-    // Stale-while-revalidate via the shared Services module: if we have a
-    // recent cached list, render it immediately (no spinner, no wait)
-    // while it quietly refreshes in the background if stale. This is
-    // what makes entering several bookings back-to-back feel instant
-    // instead of re-hitting the sheet's Services tab every time.
+    // Stale-while-revalidate via the shared Services module: render the
+    // cached list immediately if we have one, then quietly refresh.
     const cached = Services.getCached();
     if (cached) {
-      renderServiceOptions(cached);
-    } else {
-      serviceSelect.disabled = true;
-      serviceSelect.innerHTML = Services.optionsHtml(null);
+      servicesList = cached;
+      renderServicePicker();
     }
-
     try {
-      const fresh = await Services.load();
-      renderServiceOptions(fresh);
+      servicesList = await Services.load();
+      renderServicePicker();
     } catch (err) {
       if (!cached) {
-        serviceSelect.innerHTML = `<option value="">Couldn't load services</option>`;
+        servicePicker.innerHTML = `<p class="service-picker__empty">Couldn't load services.</p>`;
         UI.toast(err.message || 'Could not load services from the sheet.', 'error');
       }
-      // if a cached list was already on screen, fail silently — the
-      // form is still fully usable with what's showing.
-    } finally {
-      serviceSelect.disabled = false;
     }
   }
 
-  function renderServiceOptions(list) {
-    services = list;
-    const previouslySelected = serviceSelect.value;
-    serviceSelect.innerHTML = Services.optionsHtml(list, { selected: '', includeBlank: true });
-    if (previouslySelected) serviceSelect.value = previouslySelected;
+  function getSelectedServiceNames() {
+    return Array.from(servicePicker.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
   }
 
-  serviceSelect.addEventListener('change', () => {
-    const selected = serviceSelect.selectedOptions[0];
-    const price = selected?.dataset.price;
-    if (price !== undefined && price !== '') {
-      priceInput.value = Number(price).toFixed(2);
-    }
+  function renderServicePicker() {
+    const selected = getSelectedServiceNames();
+    servicePicker.innerHTML = Services.checklistHtml(servicesList, {
+      sizeKey: vehicleSizeSelect.value,
+      selectedNames: selected
+    });
+    UI.filterServiceChecklist(servicePicker, serviceSearchInput.value);
+    recalculateTotal();
+  }
+
+  function recalculateTotal() {
+    if (!servicesList || !vehicleSizeSelect.value) return;
+    const selected = getSelectedServiceNames();
+    const total = Services.computeTotal(servicesList, vehicleSizeSelect.value, selected);
+    priceInput.value = total.toFixed(2);
+  }
+
+  vehicleSizeSelect.addEventListener('change', renderServicePicker);
+
+  servicePicker.addEventListener('change', (e) => {
+    if (e.target.matches('input[type="checkbox"]')) recalculateTotal();
   });
+
+  serviceSearchInput.addEventListener('input', () => {
+    UI.filterServiceChecklist(servicePicker, serviceSearchInput.value);
+  });
+
+  // ---------- submit ----------
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -85,8 +103,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const payload = {
       name: form.name.value.trim(),
+      mobile: form.mobile.value.trim(),
       date: form.date.value,
-      service: form.service.value,
+      time: form.time.value,
+      vehicle: form.vehicle.value.trim(),
+      plateNumber: form.plateNumber.value.trim(),
+      vehicleSize: form.vehicleSize.value,
+      service: getSelectedServiceNames().join(', '),
       status: form.status.value,
       price: parseFloat(form.price.value) || 0,
       remarks: form.remarks.value.trim()
@@ -101,6 +124,8 @@ document.addEventListener('DOMContentLoaded', () => {
       form.reset();
       setDefaultDate();
       form.status.value = 'Pending';
+      serviceSearchInput.value = '';
+      renderServicePicker(); // clears checkboxes + price, shows "select a size" state
     } catch (err) {
       UI.toast(err.message || 'Could not save this booking. Please try again.', 'error');
     } finally {
@@ -108,5 +133,4 @@ document.addEventListener('DOMContentLoaded', () => {
       UI.setButtonLoading(submitBtn, false);
     }
   });
-
 });

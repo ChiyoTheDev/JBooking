@@ -15,7 +15,7 @@
 
   <aside class="sidebar" data-sidebar>
     <div class="sidebar__badge">
-      <img src="assets/logo.jpg" alt="John & Jans Auto Detailing" class="sidebar__badge-mark" />
+      <img src="assets/logo.jpg" alt="John &amp; Jans Auto Detailing" class="sidebar__badge-mark" />
       <div class="sidebar__badge-text">
         <span class="sidebar__badge-name" data-company-name>John &amp; Jans Auto Detailing</span>
         <span class="sidebar__badge-tagline" data-company-tagline>Carwash-Auto Detailing-PPF-Tint</span>
@@ -45,7 +45,7 @@
       <div>
         <span class="page-header__eyebrow">Booking Entry</span>
         <h1 class="page-header__title">New booking</h1>
-        <p class="page-header__subtitle">Services and prices load automatically from the Services sheet.</p>
+        <p class="page-header__subtitle">Pick a vehicle size and check off however many services the customer wants — the total updates automatically.</p>
       </div>
     </div>
 
@@ -59,15 +59,39 @@
         </div>
 
         <div class="field">
+          <label for="field-mobile">Mobile number</label>
+          <input id="field-mobile" name="mobile" type="tel" placeholder="e.g. 0917 123 4567" autocomplete="off" required />
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field">
           <label for="field-date">Booking date</label>
           <input id="field-date" name="date" type="date" required />
           <span class="field-error"></span>
         </div>
 
         <div class="field">
-          <label for="field-service">Service</label>
-          <select id="field-service" name="service" required>
-            <option value="">Loading services…</option>
+          <label for="field-time">Booking time</label>
+          <input id="field-time" name="time" type="time" required />
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field">
+          <label for="field-vehicle">Vehicle</label>
+          <input id="field-vehicle" name="vehicle" type="text" placeholder="e.g. Toyota Fortuner" autocomplete="off" />
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field">
+          <label for="field-plate">Plate number</label>
+          <input id="field-plate" name="plateNumber" type="text" placeholder="e.g. ABC 1234" autocomplete="off" />
+          <span class="field-error"></span>
+        </div>
+
+        <div class="field">
+          <label for="field-vehicle-size">Vehicle size</label>
+          <select id="field-vehicle-size" name="vehicleSize" required>
+            <option value="">Select a size…</option>
           </select>
           <span class="field-error"></span>
         </div>
@@ -76,15 +100,26 @@
           <label for="field-status">Status</label>
           <select id="field-status" name="status" required>
             <option value="Pending">Pending</option>
-            <option value="Ongoing">Ongoing</option>
             <option value="Completed">Completed</option>
             <option value="Cancelled">Cancelled</option>
           </select>
           <span class="field-error"></span>
         </div>
 
+        <div class="field field--full">
+          <label>Services</label>
+          <div class="search-box service-picker__search">
+            <span class="search-box__icon">⌕</span>
+            <input type="text" id="service-search" placeholder="Search services…" autocomplete="off" />
+          </div>
+          <div class="service-picker" id="service-picker" data-service-checklist>
+            <p class="service-picker__empty">Select a vehicle size to see prices.</p>
+          </div>
+          <span class="field-error"></span>
+        </div>
+
         <div class="field">
-          <label for="field-price">Price</label>
+          <label for="field-price">Total price</label>
           <input id="field-price" name="price" type="number" step="0.01" min="0" placeholder="0.00" required />
           <span class="field-error"></span>
         </div>

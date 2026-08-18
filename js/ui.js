@@ -111,6 +111,35 @@ const UI = (() => {
     return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
+  // ---------- time handling ----------
+  // Google Sheets can silently reformat a plain "14:30" string into its
+  // own time-serial type. To stay robust whether a cell holds plain text
+  // or a Sheets-native time value, always normalize through this before
+  // displaying or feeding an <input type="time">.
+
+  function normalizeTimeValue(value) {
+    if (!value) return '';
+    const str = String(value).trim();
+    const simple = str.match(/^(\d{1,2}):(\d{2})/);
+    if (simple) {
+      return `${simple[1].padStart(2, '0')}:${simple[2]}`;
+    }
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    }
+    return '';
+  }
+
+  function formatTime(value) {
+    const hhmm = normalizeTimeValue(value);
+    if (!hhmm) return '—';
+    const [h, m] = hhmm.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const h12 = ((h + 11) % 12) + 1;
+    return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+  }
+
   function escapeHtml(str) {
     const div = document.createElement('div');
     div.textContent = str ?? '';
@@ -131,7 +160,9 @@ const UI = (() => {
     const required = [
       ['name', 'Customer name is required.'],
       ['date', 'Booking date is required.'],
-      ['service', 'Please select a service.'],
+      ['time', 'Booking time is required.'],
+      ['mobile', 'Mobile number is required.'],
+      ['vehicleSize', 'Please select a vehicle size.'],
       ['status', 'Please select a status.'],
       ['price', 'Price is required.']
     ];
@@ -142,6 +173,12 @@ const UI = (() => {
     if (formEl.price && formEl.price.value && parseFloat(formEl.price.value) < 0) {
       errors.push({ field: 'price', message: 'Price cannot be negative.' });
     }
+
+    const checklist = formEl.querySelector('[data-service-checklist]');
+    if (checklist && !checklist.querySelector('input[type="checkbox"]:checked')) {
+      errors.push({ field: 'services', message: 'Select at least one service.' });
+    }
+
     return errors;
   }
 
@@ -150,12 +187,45 @@ const UI = (() => {
     formEl.querySelectorAll('.field--invalid').forEach((el) => el.classList.remove('field--invalid'));
 
     errors.forEach(({ field, message }) => {
-      const input = formEl[field];
+      const input = field === 'services'
+        ? formEl.querySelector('[data-service-checklist]')
+        : formEl[field];
       const wrapper = input?.closest('.field');
       wrapper?.classList.add('field--invalid');
       const errorEl = wrapper?.querySelector('.field-error');
       if (errorEl) errorEl.textContent = message;
     });
+  }
+
+  // ---------- service checklist search filter ----------
+  // Shared by booking.js and table.js's edit modal. Hides/shows
+  // .service-picker__item rows by name match — checked state and
+  // validation are unaffected since hidden items stay in the DOM,
+  // just visually hidden.
+
+  function filterServiceChecklist(pickerEl, term) {
+    if (!pickerEl) return;
+    const normalized = (term || '').trim().toLowerCase();
+    let anyVisible = false;
+
+    pickerEl.querySelectorAll('.service-picker__item').forEach((item) => {
+      const name = (item.querySelector('.service-picker__name')?.textContent || '').toLowerCase();
+      const match = !normalized || name.includes(normalized);
+      item.style.display = match ? '' : 'none';
+      if (match) anyVisible = true;
+    });
+
+    let noMatch = pickerEl.querySelector('.service-picker__no-match');
+    if (!anyVisible && normalized) {
+      if (!noMatch) {
+        noMatch = document.createElement('p');
+        noMatch.className = 'service-picker__empty service-picker__no-match';
+        pickerEl.appendChild(noMatch);
+      }
+      noMatch.textContent = `No services match "${term.trim()}".`;
+    } else if (noMatch) {
+      noMatch.remove();
+    }
   }
 
   return {
@@ -165,9 +235,12 @@ const UI = (() => {
     skeletonRows,
     formatCurrency,
     formatDate,
+    normalizeTimeValue,
+    formatTime,
     escapeHtml,
     statusPillHtml,
     validateBookingFields,
-    renderFieldErrors
+    renderFieldErrors,
+    filterServiceChecklist
   };
 })();

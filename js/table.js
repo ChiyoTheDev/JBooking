@@ -4,14 +4,6 @@
  * summary cards, search + filter, sorting, pagination,
  * edit / archive (soft delete), PDF export, and keeping the
  * table in sync with changes made elsewhere.
- *
- * Performance notes:
- * - Edit/archive update the in-memory list from the write call's own
- *   response instead of re-fetching the whole sheet afterward, so the
- *   "Saving…" state ends the moment the write finishes.
- * - Same-device tabs sync instantly via BroadcastChannel (sync.js).
- * - Other devices are caught by a quiet background poll that only
- *   re-renders if the data actually changed.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -27,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const emptyState = document.getElementById('empty-state');
   const sortHeaders = document.querySelectorAll('[data-sort-key]');
 
-  const COLUMN_COUNT = 7;
+  const COLUMN_COUNT = 8; // Name, Date, Vehicle, Plate, Service, Status, Price, Remarks, Actions
 
   let allBookings = [];
   let filtered = [];
@@ -39,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let activeFilter = 'all';
   let isModalOpen = false;
   let lastSignature = '';
+  let expandedIds = new Set(); // Booking IDs whose detail row is currently open
 
   init();
 
@@ -198,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function matchesFilter(booking) {
     if (activeFilter === 'all') return true;
     const status = String(booking['Status'] || '').toLowerCase();
-    if (['pending', 'ongoing', 'completed', 'cancelled'].includes(activeFilter)) {
+    if (['pending', 'completed', 'cancelled'].includes(activeFilter)) {
       return status === activeFilter;
     }
     const date = new Date(booking['Date']);
@@ -224,7 +217,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!searchTerm) return true;
     const haystack = [
       booking['Name'], booking['Service'], booking['Status'],
-      booking['Price'], booking['Remarks'], booking['Date']
+      booking['Price'], booking['Remarks'], booking['Date'],
+      booking['Vehicle'], booking['Plate Number'], booking['Mobile No.'], booking['Vehicle Size']
     ].map((v) => String(v ?? '').toLowerCase()).join(' | ');
     return haystack.includes(searchTerm);
   }
@@ -263,13 +257,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // ---------- summary cards ----------
 
   function renderSummary(bookings) {
-    const counts = { Pending: 0, Ongoing: 0, Completed: 0, Cancelled: 0 };
+    const counts = { Pending: 0, Completed: 0, Cancelled: 0 };
     bookings.forEach((b) => {
       const status = b['Status'];
       if (counts[status] !== undefined) counts[status]++;
     });
     setText('summary-pending', counts.Pending);
-    setText('summary-ongoing', counts.Ongoing);
     setText('summary-completed', counts.Completed);
     setText('summary-cancelled', counts.Cancelled);
     setText('summary-total', bookings.length);
@@ -296,22 +289,44 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function rowHtml(booking) {
-    const id = UI.escapeHtml(booking['Booking ID']);
-    return `
-      <tr data-booking-id="${id}">
-        <td>${UI.escapeHtml(booking['Name'])}</td>
-        <td>${UI.formatDate(booking['Date'])}</td>
-        <td>${UI.escapeHtml(booking['Service'])}</td>
-        <td>${UI.statusPillHtml(booking['Status'])}</td>
-        <td class="mono">${UI.formatCurrency(booking['Price'])}</td>
-        <td class="cell-remarks">${UI.escapeHtml(booking['Remarks']) || '<span class="muted">—</span>'}</td>
-        <td class="cell-actions">
-          <button type="button" class="icon-btn" data-action="receipt" title="Download receipt" aria-label="Download receipt">🧾</button>
-          <button type="button" class="icon-btn" data-action="edit" title="Edit booking" aria-label="Edit booking">✎</button>
-          <button type="button" class="icon-btn icon-btn--danger" data-action="delete" title="Delete booking" aria-label="Delete booking">✕</button>
-        </td>
-      </tr>
-    `;
+  const id = UI.escapeHtml(booking['Booking ID']);
+  
+  return `
+    <tr data-booking-id="${id}">
+      <td>
+        <div class="cell-group">
+          <span class="cell-group__main">${UI.escapeHtml(booking['Name'])}</span>
+          <span class="cell-group__sub">${UI.escapeHtml(booking['Mobile No.'] || 'No mobile')}</span>
+        </div>
+      </td>
+      <td>
+        <div class="cell-group">
+          <span class="cell-group__main">${UI.formatDate(booking['Date'])}</span>
+          <span class="cell-group__sub">${UI.formatTime(booking['Time'])}</span>
+        </div>
+      </td>
+      <td>
+        <div class="cell-group">
+          <span class="cell-group__main">${UI.escapeHtml(booking['Vehicle'] || '—')}</span>
+          <span class="cell-group__sub">${UI.escapeHtml(booking['Plate Number'] || '—')}</span>
+        </div>
+      </td>
+      <td>
+        <div class="cell-group">
+          <span class="cell-group__main">${UI.escapeHtml(booking['Service'] || '—')}</span>
+          <span class="cell-group__sub">${UI.escapeHtml(booking['Vehicle Size'] || '—')}</span>
+        </div>
+      </td>
+      <td>${UI.statusPillHtml(booking['Status'])}</td>
+      <td class="mono">${UI.formatCurrency(booking['Price'])}</td>
+      <td style="max-width: 150px;">${UI.escapeHtml(booking['Remarks'] || '—')}</td>
+      <td>
+        <button type="button" class="icon-btn" data-action="receipt" title="Download receipt">🧾</button>
+        <button type="button" class="icon-btn" data-action="edit" title="Edit booking">✎</button>
+        <button type="button" class="icon-btn icon-btn--danger" data-action="delete" title="Delete booking">✕</button>
+      </td>
+    </tr>
+  `;
   }
 
   function renderPagination(totalPages) {
@@ -355,6 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       btn.addEventListener('click', async () => {
         const action = btn.dataset.action;
+        if (action === 'toggle') toggleDetailRow(bookingId, btn);
         if (action === 'edit') openEditModal(booking);
         if (action === 'delete') handleDelete(booking);
         if (action === 'receipt') {
@@ -369,6 +385,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function toggleDetailRow(bookingId, toggleBtn) {
+    const isExpanded = expandedIds.has(bookingId);
+    const detailRow = tableBody.querySelector(`tr.row-detail[data-detail-for="${CSS.escape(bookingId)}"]`);
+
+    if (isExpanded) {
+      expandedIds.delete(bookingId);
+      detailRow?.classList.add('row-detail--hidden');
+      toggleBtn.textContent = '▸';
+      toggleBtn.setAttribute('aria-expanded', 'false');
+      toggleBtn.title = 'Show more details';
+      toggleBtn.setAttribute('aria-label', 'Show more details');
+    } else {
+      expandedIds.add(bookingId);
+      detailRow?.classList.remove('row-detail--hidden');
+      toggleBtn.textContent = '▾';
+      toggleBtn.setAttribute('aria-expanded', 'true');
+      toggleBtn.title = 'Hide more details';
+      toggleBtn.setAttribute('aria-label', 'Hide more details');
+    }
+  }
+
   async function handleDelete(booking) {
     const confirmed = await UI.confirmDialog({
       title: 'Delete this booking?',
@@ -380,9 +417,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       await Api.archiveBooking(booking['Booking ID']);
-      // Optimistic update: the write already told the sheet what to do,
-      // so just drop it from our local list instead of re-fetching
-      // everything — this is what makes delete feel instant.
       allBookings = allBookings.filter((b) => b['Booking ID'] !== booking['Booking ID']);
       lastSignature = computeSignature(allBookings);
       applyFiltersAndRender();
@@ -397,6 +431,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function openEditModal(booking) {
     isModalOpen = true;
 
+    const currentServices = String(booking['Service'] || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const currentSize = booking['Vehicle Size'] || '';
+
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.innerHTML = `
@@ -405,18 +445,39 @@ document.addEventListener('DOMContentLoaded', () => {
         <form class="edit-form" novalidate>
           <div class="field">
             <label for="edit-name">Customer name</label>
-            <input id="edit-name" name="name" type="text" value="${UI.escapeHtml(booking['Name'])}" required />
+            <input id="edit-name" name="name" type="text" placeholder="e.g. Alex Rivera" value="${UI.escapeHtml(booking['Name'])}" required />
+            <span class="field-error"></span>
+          </div>
+          <div class="field">
+            <label for="edit-mobile">Mobile number</label>
+            <input id="edit-mobile" name="mobile" type="tel" placeholder="e.g. 0917 123 4567" value="${UI.escapeHtml(booking['Mobile No.'])}" required />
             <span class="field-error"></span>
           </div>
           <div class="field">
             <label for="edit-date">Booking date</label>
-            <input id="edit-date" name="date" type="date" value="${formatForInput(booking['Date'])}" required />
+            <input id="edit-date" name="date" type="date" value="${formatDateForInput(booking['Date'])}" required />
             <span class="field-error"></span>
           </div>
           <div class="field">
-            <label for="edit-service">Service</label>
-            <select id="edit-service" name="service" required>
-              ${Services.optionsHtml(Services.getCached(), { selected: booking['Service'], includeBlank: false })}
+            <label for="edit-time">Booking time</label>
+            <input id="edit-time" name="time" type="time" value="${UI.normalizeTimeValue(booking['Time'])}" required />
+            <span class="field-error"></span>
+          </div>
+          <div class="field">
+            <label for="edit-vehicle">Vehicle</label>
+            <input id="edit-vehicle" name="vehicle" type="text" placeholder="e.g. Toyota Fortuner" value="${UI.escapeHtml(booking['Vehicle'])}" />
+            <span class="field-error"></span>
+          </div>
+          <div class="field">
+            <label for="edit-plate">Plate number</label>
+            <input id="edit-plate" name="plateNumber" type="text" placeholder="e.g. ABC 1234" value="${UI.escapeHtml(booking['Plate Number'])}" />
+            <span class="field-error"></span>
+          </div>
+          <div class="field">
+            <label for="edit-vehicle-size">Vehicle size</label>
+            <select id="edit-vehicle-size" name="vehicleSize" required>
+              <option value="">Select a size…</option>
+              ${CONFIG.VEHICLE_SIZES.map((s) => `<option value="${s}" ${s === currentSize ? 'selected' : ''}>${s}</option>`).join('')}
             </select>
             <span class="field-error"></span>
           </div>
@@ -427,14 +488,25 @@ document.addEventListener('DOMContentLoaded', () => {
             </select>
             <span class="field-error"></span>
           </div>
+          <div class="field field--full">
+            <label>Services</label>
+            <div class="search-box service-picker__search">
+              <span class="search-box__icon">⌕</span>
+              <input type="text" id="edit-service-search" placeholder="Search services…" autocomplete="off" />
+            </div>
+            <div class="service-picker" id="edit-service-picker" data-service-checklist>
+              ${Services.checklistHtml(Services.getCached(), { sizeKey: currentSize, selectedNames: currentServices })}
+            </div>
+            <span class="field-error"></span>
+          </div>
           <div class="field">
-            <label for="edit-price">Price</label>
+            <label for="edit-price">Total price</label>
             <input id="edit-price" name="price" type="number" step="0.01" min="0" value="${Number(booking['Price']) || 0}" required />
             <span class="field-error"></span>
           </div>
           <div class="field field--full">
             <label for="edit-remarks">Remarks</label>
-            <textarea id="edit-remarks" name="remarks" rows="2">${UI.escapeHtml(booking['Remarks'])}</textarea>
+            <textarea id="edit-remarks" name="remarks" placeholder="Optional notes — condition of vehicle, special requests, etc." rows="2">${UI.escapeHtml(booking['Remarks'])}</textarea>
             <span class="field-error"></span>
           </div>
           <div class="modal-card__actions modal-card__actions--full">
@@ -447,12 +519,51 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('modal-overlay--visible'));
 
-    const serviceSelect = overlay.querySelector('#edit-service');
+    const form = overlay.querySelector('.edit-form');
+    const sizeSelect = overlay.querySelector('#edit-vehicle-size');
+    const servicePicker = overlay.querySelector('#edit-service-picker');
+    const serviceSearchInput = overlay.querySelector('#edit-service-search');
+    const priceInput = overlay.querySelector('#edit-price');
+    let editServicesList = Services.getCached();
+
+    // Apply once for the initial render (in case Services.getCached() was
+    // already non-null when the modal opened) — harmless no-op otherwise.
+    UI.filterServiceChecklist(servicePicker, serviceSearchInput.value);
+
+    // Refresh with a live services list in the background in case it
+    // wasn't cached yet, or prices have changed since it was cached —
+    // preserves whatever the user has checked/selected so far.
     Services.load().then((list) => {
-      const currentValue = serviceSelect.value; // preserve whatever the user has selected so far
-      serviceSelect.innerHTML = Services.optionsHtml(list, { selected: currentValue, includeBlank: false });
-    }).catch(() => {
-      // keep whatever is already showing — the form is still usable
+      editServicesList = list;
+      rerenderServicePicker({ recalc: false });
+    }).catch(() => { /* keep whatever is already shown */ });
+
+    function getSelectedServiceNames() {
+      return Array.from(servicePicker.querySelectorAll('input[type="checkbox"]:checked')).map((cb) => cb.value);
+    }
+
+    function rerenderServicePicker({ recalc = true } = {}) {
+      const selected = getSelectedServiceNames();
+      servicePicker.innerHTML = Services.checklistHtml(editServicesList, {
+        sizeKey: sizeSelect.value,
+        selectedNames: selected
+      });
+      UI.filterServiceChecklist(servicePicker, serviceSearchInput.value);
+      if (recalc) recalculateTotal();
+    }
+
+    function recalculateTotal() {
+      if (!editServicesList || !sizeSelect.value) return;
+      const total = Services.computeTotal(editServicesList, sizeSelect.value, getSelectedServiceNames());
+      priceInput.value = total.toFixed(2);
+    }
+
+    sizeSelect.addEventListener('change', () => rerenderServicePicker());
+    servicePicker.addEventListener('change', (e) => {
+      if (e.target.matches('input[type="checkbox"]')) recalculateTotal();
+    });
+    serviceSearchInput.addEventListener('input', () => {
+      UI.filterServiceChecklist(servicePicker, serviceSearchInput.value);
     });
 
     const close = () => {
@@ -463,17 +574,6 @@ document.addEventListener('DOMContentLoaded', () => {
     overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
     overlay.querySelector('[data-action="cancel"]').addEventListener('click', close);
 
-    const form = overlay.querySelector('.edit-form');
-
-    // Selecting a different service refreshes the price, same as the
-    // new-booking form — the price stays editable afterward either way.
-    form.service.addEventListener('change', () => {
-      const selected = form.service.selectedOptions[0];
-      const price = selected?.dataset.price;
-      if (price !== undefined && price !== '') {
-        form.price.value = Number(price).toFixed(2);
-      }
-    });
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
@@ -489,16 +589,19 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const updated = await Api.updateBooking(booking['Booking ID'], {
           name: form.name.value.trim(),
+          mobile: form.mobile.value.trim(),
           date: form.date.value,
-          service: form.service.value.trim(),
+          time: form.time.value,
+          vehicle: form.vehicle.value.trim(),
+          plateNumber: form.plateNumber.value.trim(),
+          vehicleSize: form.vehicleSize.value,
+          service: getSelectedServiceNames().join(', '),
           status: form.status.value,
           price: parseFloat(form.price.value) || 0,
           remarks: form.remarks.value.trim()
         });
         // Optimistic update: patch the row in place from the response
-        // instead of re-fetching the whole sheet. This is the fix for
-        // "still shows loading after the sheet already changed" — the
-        // save is done the instant this response comes back.
+        // instead of re-fetching the whole sheet.
         allBookings = allBookings.map((b) =>
           b['Booking ID'] === booking['Booking ID'] ? updated : b
         );
@@ -513,7 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  function formatForInput(value) {
+  function formatDateForInput(value) {
     const d = new Date(value);
     if (isNaN(d.getTime())) return '';
     return d.toISOString().slice(0, 10);
@@ -523,7 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function exportTableToPdf(rows) {
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: 'landscape' });
 
     doc.setFontSize(16);
     doc.text(CONFIG.COMPANY_NAME, 14, 18);
@@ -533,10 +636,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     doc.autoTable({
       startY: 30,
-      head: [['Name', 'Date', 'Service', 'Status', 'Price', 'Remarks']],
+      head: [['Name', 'Date', 'Time', 'Vehicle', 'Plate No.', 'Service', 'Status', 'Price']],
       body: rows.map((b) => [
-        b['Name'], UI.formatDate(b['Date']), b['Service'], b['Status'],
-        UI.formatCurrency(b['Price']), b['Remarks'] || ''
+        b['Name'], UI.formatDate(b['Date']), UI.formatTime(b['Time']),
+        b['Vehicle'] || '', b['Plate Number'] || '', b['Service'], b['Status'],
+        UI.formatCurrency(b['Price'])
       ]),
       styles: { fontSize: 9, cellPadding: 3 },
       headStyles: { fillColor: [20, 20, 22] }
@@ -568,8 +672,13 @@ document.addEventListener('DOMContentLoaded', () => {
       head: [['Field', 'Details']],
       body: [
         ['Customer', booking['Name']],
-        ['Service date', UI.formatDate(booking['Date'])],
-        ['Service', booking['Service']],
+        ['Mobile No.', booking['Mobile No.'] || '—'],
+        ['Vehicle', booking['Vehicle'] || '—'],
+        ['Plate Number', booking['Plate Number'] || '—'],
+        ['Vehicle Size', booking['Vehicle Size'] || '—'],
+        ['Booking date', UI.formatDate(booking['Date'])],
+        ['Booking time', UI.formatTime(booking['Time'])],
+        ['Service(s)', booking['Service']],
         ['Status', booking['Status']],
         ['Remarks', booking['Remarks'] || '—'],
       ],

@@ -1,13 +1,17 @@
 /**
  * services.js
  * Single source of truth for loading + caching the Services sheet, used by
- * both the new-booking form (booking.js) and the edit modal (table.js) so
- * they share one cache and one dropdown-building function instead of two
- * copies that could drift apart.
+ * both the new-booking form (booking.js) and the edit modal (table.js).
+ *
+ * Each service now has a price PER VEHICLE SIZE (Small/Medium/Large/XL/
+ * XXL/Pick Up/Dirty Trail Car — see CONFIG.VEHICLE_SIZES) instead of one
+ * flat price, and a booking can include more than one service. This
+ * module provides the price lookups and the checkbox-list UI both pages
+ * use for picking services.
  */
 
 const Services = (() => {
-  const CACHE_KEY = 'ld_services_cache_v1';
+  const CACHE_KEY = 'ld_services_cache_v2';
 
   function readCache() {
     try {
@@ -58,41 +62,50 @@ const Services = (() => {
     }
   }
 
-  /**
-   * Builds <option> HTML for a services dropdown.
-   * - list === null  → still loading; shows a placeholder (keeps `selected` if given)
-   * - list === []    → no services found
-   * - selected       → the currently chosen service name (e.g. editing an existing booking)
-   * - includeBlank   → whether to show a "Select a service…" first option when nothing is selected
-   */
-  function optionsHtml(list, { selected = '', includeBlank = true } = {}) {
-    if (!list) {
-      const label = selected ? UI.escapeHtml(selected) : 'Loading services…';
-      return `<option value="${UI.escapeHtml(selected)}" selected>${label}</option>`;
-    }
-    if (!list.length) {
-      return `<option value="">No services found</option>`;
-    }
-
-    const parts = [];
-    const hasSelected = list.some((s) => s['Service Name'] === selected);
-
-    if (includeBlank && !selected) {
-      parts.push(`<option value="">Select a service…</option>`);
-    }
-    if (selected && !hasSelected) {
-      // The booking's current service isn't in the active list anymore
-      // (renamed/deactivated) — keep it visible instead of silently dropping it.
-      parts.push(`<option value="${UI.escapeHtml(selected)}" selected>${UI.escapeHtml(selected)} (current)</option>`);
-    }
-    list.forEach((s) => {
-      const name = s['Service Name'];
-      const price = Number(s['Price']) || 0;
-      const isSelected = name === selected;
-      parts.push(`<option value="${UI.escapeHtml(name)}" data-price="${price}" ${isSelected ? 'selected' : ''}>${UI.escapeHtml(name)} — ${UI.formatCurrency(price)}</option>`);
-    });
-    return parts.join('');
+  /** A service's price for a given vehicle size (0 if missing/unset). */
+  function priceFor(service, sizeKey) {
+    if (!service || !sizeKey) return 0;
+    return Number(service[sizeKey]) || 0;
   }
 
-  return { getCached, load, optionsHtml };
+  /** Sum of the given services' prices at the given vehicle size. */
+  function computeTotal(list, sizeKey, selectedNames) {
+    if (!list || !sizeKey || !selectedNames?.length) return 0;
+    return list
+      .filter((s) => selectedNames.includes(s['Service Name']))
+      .reduce((sum, s) => sum + priceFor(s, sizeKey), 0);
+  }
+
+  /**
+   * Builds the checkbox-list markup for choosing one or more services.
+   * Each row shows the service name and its price at `sizeKey` ('—'
+   * until a vehicle size has been chosen, 'N/A' if that service has no
+   * price set for the chosen size).
+   * - list === null → still loading
+   * - list === []   → no active services found
+   */
+  function checklistHtml(list, { sizeKey = '', selectedNames = [] } = {}) {
+    if (!list) {
+      return `<p class="service-picker__empty">Loading services…</p>`;
+    }
+    if (!list.length) {
+      return `<p class="service-picker__empty">No active services found in the sheet.</p>`;
+    }
+    return list.map((s, i) => {
+      const name = s['Service Name'];
+      const checked = selectedNames.includes(name) ? 'checked' : '';
+      const raw = sizeKey ? s[sizeKey] : undefined;
+      const hasPrice = raw !== undefined && raw !== null && String(raw).trim() !== '';
+      const priceLabel = !sizeKey ? '—' : (hasPrice ? UI.formatCurrency(priceFor(s, sizeKey)) : 'N/A');
+      const id = `svc-${i}-${String(name).replace(/[^a-zA-Z0-9]/g, '')}`;
+      return `
+        <label class="service-picker__item" for="${id}">
+          <input type="checkbox" id="${id}" value="${UI.escapeHtml(name)}" ${checked} />
+          <span class="service-picker__name">${UI.escapeHtml(name)}</span>
+          <span class="service-picker__price mono">${priceLabel}</span>
+        </label>`;
+    }).join('');
+  }
+
+  return { getCached, load, priceFor, computeTotal, checklistHtml };
 })();
