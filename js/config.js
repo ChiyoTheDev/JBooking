@@ -19,7 +19,7 @@ const CONFIG = Object.freeze({
 
   // Vehicle size categories used to price services — must match the
   // Services sheet's column headers exactly (see backend/Code.gs).
-  VEHICLE_SIZES: ['Small', 'Medium', 'Large', 'XL', 'XXL', 'Pick Up', 'Dirty Trail Car'],
+  VEHICLE_SIZES: ['Small', 'Medium', 'Large', 'XL', 'XXL', 'Pick Up', 'Dirty Trail Car', 'Moto - Small', 'Moto - Mid Size', 'Moto - Big Bike'],
 
   // How often the table page silently checks the sheet for changes made
   // from other devices/browsers (milliseconds). Lower = more "live" but
@@ -30,7 +30,7 @@ const CONFIG = Object.freeze({
   // browser tab before it's treated as stale (milliseconds). The cached
   // list still renders instantly; a fresh copy is fetched in the
   // background and swapped in if it changed.
-  SERVICES_CACHE_TTL_MS: 5 * 60 * 1000,
+  SERVICES_CACHE_TTL_MS: 1 * 60 * 1000,
 
   // Name used for the same-device cross-tab sync channel (see api.js /
   // booking.js / table.js). Purely local to the browser — does not
