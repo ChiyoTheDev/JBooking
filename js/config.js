@@ -10,7 +10,7 @@ const CONFIG = Object.freeze({
   // Must match the API_KEY constant in backend/Code.gs
   API_KEY: 'automotivedetailing',
 
-  COMPANY_NAME: 'Lumiere Auto Detailing',
+  COMPANY_NAME: 'John & Jans Auto Detailing',
   COMPANY_TAGLINE: 'Carwash-Auto Detailing-PPF-Tint',
 
   STATUSES: ['Pending', 'Completed', 'Cancelled'],
